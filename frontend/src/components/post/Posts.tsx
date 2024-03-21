@@ -18,8 +18,6 @@ export default function Posts({
   const [posts, setPosts] = useImmer<APIResponseType<PostApiType>>(data);
 
   useEffect(() => {
-    console.log("the user is ", user);
-
     laraEcho
       .channel("post-broadcast")
       .listen("PostBroadCastEvent", (event: any) => {
@@ -55,7 +53,10 @@ export default function Posts({
     };
   }, []);
   return (
-    <div className="pt-4 pl-2 grid grid-cols-1  md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 max-h-screen">
+    <div
+      className="pt-4 pl-2 grid grid-cols-1  md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 pb-32"
+      style={{ height: "90vh" }}
+    >
       {posts.data.length > 0 &&
         posts.data.map((item, index) => (
           <ShowPost post={item} key={index}>
