@@ -22,7 +22,7 @@ import { signOut, useSession } from "next-auth/react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import myAxios from "@/lib/axios.config";
-import { UPDATE_PROFILE } from "@/lib/apiEndPoints";
+import { LOGOUT_URL, UPDATE_PROFILE } from "@/lib/apiEndPoints";
 import { CustomUser } from "@/app/api/auth/[...nextauth]/authOptions";
 import { toast } from "react-toastify";
 import { getImageUrl } from "@/lib/utils";
@@ -43,8 +43,26 @@ export default function ProfileMenu({ user }: { user: CustomUser }) {
       setImage(file);
     }
   };
-  const logOut = () => {
-    signOut({ callbackUrl: "/login" });
+  const logoutUser = async () => {
+    myAxios
+      .post(
+        LOGOUT_URL,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        }
+      )
+      .then((res) => {
+        signOut({
+          callbackUrl: "/login",
+          redirect: true,
+        });
+      })
+      .catch((err) => {
+        toast.error("Something went wrong.Please try again!");
+      });
   };
 
   const updateProfile = (event: React.FormEvent) => {
@@ -87,7 +105,7 @@ export default function ProfileMenu({ user }: { user: CustomUser }) {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-4">
-            <Button variant="destructive" onClick={logOut}>
+            <Button variant="destructive" onClick={logoutUser}>
               Yes Logout!
             </Button>
             <DialogClose>

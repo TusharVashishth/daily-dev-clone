@@ -1,43 +1,49 @@
-"use client";
 import React, { useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import UserAvatar from "../common/UserAvatar";
 import { Textarea } from "../ui/textarea";
+import { useSession } from "next-auth/react";
+import { CustomUser } from "@/app/api/auth/[...nextauth]/authOptions";
 import myAxios from "@/lib/axios.config";
 import { COMMENT_URL } from "@/lib/apiEndPoints";
 import { toast } from "react-toastify";
-import { Button } from "../ui/button";
-import { useSession } from "next-auth/react";
-import { CustomSession } from "@/app/api/auth/[...nextauth]/authOptions";
-
-import UserAvatar from "../common/UserAvatar";
 import CommentCard from "./CommentCard";
-export default function AddComment({ post_id }: { post_id: number }) {
-  const [comment, setComment] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showBox, setShowBox] = useState(false);
+
+export default function AddComment({ post }: { post: PostApiType }) {
+  const [showBox, setShowBox] = useState(true);
   const { data } = useSession();
-  const [comments, setComments] = useState<APIResponseType<CommentType>>();
-  const customSession = data as CustomSession;
+  const user: CustomUser = data?.user as CustomUser;
+  const [comment, setComment] = useState("");
   const [errors, setErrors] = useState({
+    post_id: [],
     comment: [],
   });
-  const handleSubmit = (event: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+  const [comments, setComments] = useState<APIResponseType<CommentType>>();
+
+  useEffect(() => {
+    fetchComments();
+  }, []);
+
+  const addComment = (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
-    const payload = {
-      comment,
-      post_id: post_id,
-    };
     myAxios
-      .post(COMMENT_URL, payload, {
-        headers: {
-          Authorization: `Bearer ${customSession.user?.token}`,
+      .post(
+        COMMENT_URL,
+        {
+          comment,
+          post_id: post.id,
         },
-      })
+        {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        }
+      )
       .then((res) => {
-        setLoading(false);
         const response = res.data;
-        setComment("");
-        toast.success("Commented successfully!");
+        setLoading(false);
         setComments((prevState) => {
           if (prevState) {
             if (prevState?.data.length === 0) {
@@ -45,79 +51,76 @@ export default function AddComment({ post_id }: { post_id: number }) {
                 ...prevState,
                 data: [response.comment],
               };
-            } else
+            } else {
               return {
                 ...prevState,
-                data: [response.comment, ...prevState!.data],
+                data: [response.comment, ...prevState.data],
               };
+            }
           }
         });
+
+        setComment("");
+        toast.success("Comment added successfully!");
       })
       .catch((err) => {
         setLoading(false);
-        if (err.response?.status == 422) {
-          setErrors(err.response?.data?.errors);
+        if (err.response?.status === 422) {
+          setErrors(err.response?.data.errors);
         } else {
-          toast.error("Something went wrong.please try again!");
+          toast.error("Something went wrong.Please try again!");
         }
       });
   };
 
-  useEffect(() => {
-    fetchComments();
-  }, []);
-
   const fetchComments = () => {
     myAxios
-      .get(`${COMMENT_URL}?post_id=${post_id}`, {
+      .get(`${COMMENT_URL}?post_id=${post.id}`, {
         headers: {
-          Authorization: `Bearer ${customSession.user?.token}`,
+          Authorization: `Bearer ${user.token}`,
         },
       })
       .then((res) => {
         setComments(res.data);
+        console.log("The response is", res.data);
       })
       .catch((err) => {
-        toast.error("Something went wrong.while fetching comments");
+        toast.error("Someting went wrong while fetching comments!");
       });
   };
+
   return (
-    <div>
-      <div className="my-4">
-        {showBox ? (
-          <form onSubmit={handleSubmit}>
-            <div className="mb-2">
+    <div className="my-4">
+      {showBox ? (
+        <div
+          className="border rounded-xl flex justify-between items-center p-3"
+          onClick={() => setShowBox(false)}
+        >
+          <div className="flex space-x-4 items-center">
+            <UserAvatar image={post.user.profile_image} />
+            <p className="text-muted-foreground text-sm">Share your thoughts</p>
+          </div>
+          <Button variant="outline">Post</Button>
+        </div>
+      ) : (
+        <div>
+          <form onSubmit={addComment}>
+            <div className="mb-4">
               <Textarea
                 placeholder="Type your thoughts"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
-              <span className="text-red-400">{errors.comment?.[0]}</span>
+              <span className="text-red-500">{errors.comment?.[0]}</span>
             </div>
             <div className="mb-2 flex justify-end">
               <Button disabled={loading}>
-                {" "}
-                {loading ? "Processing.." : "Submit"}{" "}
+                {loading ? "Processing.." : "Post Comment"}
               </Button>
             </div>
           </form>
-        ) : (
-          <div
-            className="border rounded-md flex justify-between items-center p-4 cursor-pointer"
-            onClick={() => setShowBox(true)}
-          >
-            <div className="flex space-x-4 items-center">
-              <UserAvatar
-                image={customSession.user?.profile_image ?? undefined}
-              />
-              <p className="text-muted-foreground text-sm">
-                Share your thoughts
-              </p>
-            </div>
-            <Button variant="outline">Post</Button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="my-4">
         {comments?.data &&

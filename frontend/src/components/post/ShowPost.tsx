@@ -38,7 +38,7 @@ export default function ShowPost({
           />
           <p>{post.description ?? ""}</p>
 
-          <AddComment post_id={post.id} />
+          <AddComment post={post} />
         </div>
       </DialogContent>
     </Dialog>
